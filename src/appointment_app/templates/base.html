@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Appointment Manager{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Outfit', 'ui-sans-serif', 'system-ui'],
+              display: ['Cormorant Garamond', 'serif'],
+            },
+            colors: {
+              canvas: '#f6f1e8',
+              ink: '#1f2937',
+              brand: '#0f766e',
+              brandDark: '#115e59',
+              sand: '#fffaf1'
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+  <body class="min-h-screen bg-canvas text-ink antialiased">
+    <div class="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_10%_20%,rgba(15,118,110,0.12),transparent_35%),radial-gradient(circle_at_90%_0%,rgba(217,119,6,0.12),transparent_38%)]"></div>
+
+    <header class="sticky top-0 z-40 border-b border-teal-900/10 bg-sand/85 backdrop-blur">
+      <nav class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex min-h-16 items-center justify-between gap-3 py-2 md:py-0">
+        <a class="flex min-w-0 shrink items-center gap-2 whitespace-nowrap font-display text-xl font-bold leading-none tracking-wide text-brandDark sm:text-3xl" href="{{ url_for('main.home') }}">
+          <span>RendezVous Pro</span>
+          {% if current_user.is_authenticated and current_user.role == 'company' and current_user.company_profile %}
+            <span class="hidden border-l border-teal-900/15 pl-2 font-sans text-xs font-semibold uppercase tracking-wider text-teal-700 sm:inline">{{ current_user.company_profile.company_name }}</span>
+          {% endif %}
+        </a>
+        <div class="hidden flex-wrap items-center gap-2 text-sm md:flex">
+          {% if current_user.is_authenticated %}
+            <span class="max-w-40 truncate rounded-full bg-teal-50 px-3 py-1.5 font-medium text-brandDark" title="{{ current_user.full_name }}"><span data-greeting>Bonjour</span>, {{ current_user.full_name }}</span>
+            {% if current_user.role == "client" %}
+              <a class="rounded-full px-3 py-1.5 text-brandDark hover:bg-teal-50" href="{{ url_for('main.my_appointments') }}">Mon espace</a>
+              <a class="rounded-full px-3 py-1.5 text-brandDark hover:bg-teal-50" href="{{ url_for('main.companies') }}">Entreprises</a>
+            {% else %}
+              <a class="rounded-full px-3 py-1.5 text-brandDark hover:bg-teal-50" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            {% endif %}
+            <form method="post" action="{{ url_for('auth.logout') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="rounded-full bg-brand px-3 py-1.5 font-medium text-white hover:bg-brandDark" type="submit">Deconnexion</button>
+            </form>
+          {% else %}
+            <button class="rounded-full px-3 py-1.5 text-brandDark hover:bg-teal-50" type="button" data-auth-modal="login">Connexion</button>
+            <button class="rounded-full bg-brand px-3 py-1.5 font-medium text-white hover:bg-brandDark" type="button" data-auth-modal="register">Inscription</button>
+          {% endif %}
+        </div>
+        <button class="shrink-0 rounded-lg border border-teal-900/15 px-3 py-2 text-sm font-semibold text-brandDark md:hidden" type="button" data-mobile-menu aria-label="Ouvrir le menu" aria-expanded="false">Menu</button>
+        </div>
+        <div class="hidden border-t border-teal-900/10 py-3 md:hidden" data-mobile-menu-panel>
+          <div class="flex flex-col gap-2 text-sm">
+            {% if current_user.is_authenticated %}
+              <p class="truncate px-3 py-1 text-sm font-semibold text-brandDark"><span data-greeting>Bonjour</span>, {{ current_user.full_name }}</p>
+              {% if current_user.role == "client" %}
+                <a class="rounded-lg px-3 py-2 text-brandDark hover:bg-teal-50" href="{{ url_for('main.my_appointments') }}">Mon espace</a>
+                <a class="rounded-lg px-3 py-2 text-brandDark hover:bg-teal-50" href="{{ url_for('main.companies') }}">Entreprises</a>
+              {% else %}
+                <a class="rounded-lg px-3 py-2 text-brandDark hover:bg-teal-50" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+              {% endif %}
+              <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="rounded-lg bg-brand px-3 py-2 text-left font-medium text-white" type="submit">Deconnexion</button></form>
+            {% else %}
+              <button class="rounded-lg px-3 py-2 text-left text-brandDark hover:bg-teal-50" type="button" data-auth-modal="login">Connexion</button>
+              <button class="rounded-lg bg-brand px-3 py-2 text-left font-medium text-white" type="button" data-auth-modal="register">Creer un compte</button>
+            {% endif %}
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <ul class="mb-4 space-y-2">
+            {% for category, message in messages %}
+              <li class="rounded-xl border px-4 py-3 text-sm
+                {% if category == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-900
+                {% elif category == 'error' %}border-rose-200 bg-rose-50 text-rose-900
+                {% elif category == 'warning' %}border-amber-200 bg-amber-50 text-amber-900
+                {% else %}border-slate-200 bg-white text-slate-800{% endif %}">
+                {{ message }}
+              </li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+    {% if not current_user.is_authenticated %}
+      <div class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/45 p-4" data-auth-dialog role="dialog" aria-modal="true" aria-labelledby="auth-dialog-title">
+        <div class="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+          <div class="flex items-start justify-between gap-4"><div><p class="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700" data-auth-kicker>Bienvenue</p><h2 id="auth-dialog-title" class="mt-1 font-display text-4xl text-brandDark" data-auth-title>Connexion</h2></div><button class="rounded-lg p-2 text-slate-500 hover:bg-slate-100" type="button" data-auth-close aria-label="Fermer">Fermer</button></div>
+
+          <form class="mt-5 space-y-3" method="post" action="{{ url_for('auth.login') }}" data-auth-form="login">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Email</label><input class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" type="email" name="email" required></div>
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Mot de passe</label><input class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" type="password" name="password" required></div>
+            <button class="w-full rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brandDark" type="submit">Se connecter</button>
+            <button class="w-full text-sm font-medium text-brandDark underline" type="button" data-auth-modal="register">Pas encore de compte ? Creer un compte</button>
+          </form>
+
+          <form class="mt-5 hidden space-y-3" method="post" action="{{ url_for('auth.register') }}" data-auth-form="register">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Nom complet</label><input class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" type="text" name="full_name" required></div>
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Email</label><input class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" type="email" name="email" required></div>
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Mot de passe</label><input class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" type="password" name="password" minlength="8" required><p class="mt-1 text-xs text-slate-500">8 caracteres minimum, avec majuscule, minuscule, chiffre et caractere special.</p></div>
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Confirmation</label><input class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" type="password" name="confirm_password" required></div>
+            <div><label class="mb-1 block text-xs font-semibold uppercase text-slate-500">Type de compte</label><select class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" name="role"><option value="client">Client</option><option value="company">Entreprise</option></select></div>
+            <button class="w-full rounded-lg bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brandDark" type="submit">Creer mon compte</button>
+            <button class="w-full text-sm font-medium text-brandDark underline" type="button" data-auth-modal="login">J'ai deja un compte</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
+    {% block scripts %}{% endblock %}
+    <script>
+      (function () {
+        const menuButton = document.querySelector('[data-mobile-menu]');
+        const menuPanel = document.querySelector('[data-mobile-menu-panel]');
+        if (menuButton && menuPanel) menuButton.addEventListener('click', function () { const isOpen = !menuPanel.classList.contains('hidden'); menuPanel.classList.toggle('hidden', isOpen); menuButton.setAttribute('aria-expanded', String(!isOpen)); });
+        function updateGreeting() { const hour = new Date().getHours(); const greeting = hour >= 18 || hour < 5 ? 'Bonsoir' : 'Bonjour'; document.querySelectorAll('[data-greeting]').forEach(function (element) { element.textContent = greeting; }); }
+        updateGreeting();
+        window.setInterval(updateGreeting, 60000);
+        const dialog = document.querySelector('[data-auth-dialog]');
+        if (!dialog) return;
+        const title = dialog.querySelector('[data-auth-title]'); const kicker = dialog.querySelector('[data-auth-kicker]');
+        function openAuth(mode) { dialog.classList.remove('hidden'); dialog.classList.add('flex'); dialog.querySelectorAll('[data-auth-form]').forEach(function (form) { form.classList.toggle('hidden', form.dataset.authForm !== mode); }); title.textContent = mode === 'login' ? 'Connexion' : 'Creer un compte'; kicker.textContent = mode === 'login' ? 'Bon retour' : 'Bienvenue'; dialog.querySelector('[data-auth-form="' + mode + '"] input:not([type="hidden"])').focus(); }
+        document.querySelectorAll('[data-auth-modal]').forEach(function (button) { button.addEventListener('click', function () { openAuth(button.dataset.authModal); }); });
+        dialog.querySelector('[data-auth-close]').addEventListener('click', function () { dialog.classList.add('hidden'); dialog.classList.remove('flex'); });
+        dialog.addEventListener('click', function (event) { if (event.target === dialog) { dialog.classList.add('hidden'); dialog.classList.remove('flex'); } });
+      })();
+    </script>
+  </body>
+</html>
